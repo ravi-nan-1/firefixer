@@ -4,6 +4,8 @@ import { useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
 import { getSessionData } from '@/app/actions';
 import { Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 function ChatPageClient() {
   const searchParams = useSearchParams();
@@ -26,13 +28,15 @@ function ChatPageClient() {
           setXmlDefinition(data.xmlDefinition);
         }
         setIsLoading(false);
+      }).catch(() => {
+        setIsLoading(false);
       });
     } else {
         setIsLoading(false);
     }
   }, [sessionId]);
   
-  if (isLoading || !sessionId) {
+  if (isLoading) {
       return (
           <div className="flex flex-col items-center justify-center h-full gap-2">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground"/>
@@ -41,11 +45,14 @@ function ChatPageClient() {
       )
   }
 
-  if (!fileContent || !xmlDefinition) {
+  if (!sessionId || !fileContent || !xmlDefinition) {
     return (
-        <div className="flex flex-col items-center justify-center h-full text-center">
+        <div className="flex flex-col items-center justify-center h-full text-center gap-4">
             <p className='text-lg font-semibold'>Session Expired or Invalid</p>
-            <p className='text-muted-foreground'>Could not load file data. Please start over by uploading your files again.</p>
+            <p className='text-muted-foreground'>Could not load file data. Your session may have expired.</p>
+            <Button asChild>
+                <Link href="/upload">Start Over</Link>
+            </Button>
         </div>
     )
   }
