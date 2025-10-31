@@ -12,15 +12,6 @@ const formSchema = z.object({
   xml: z.instanceof(File).refine((file) => file.size > 0, 'XML definition file is required.'),
 });
 
-export type AnalysisState = {
-  status: 'success' | 'error' | 'idle';
-  issues?: string[];
-  suggestions?: string;
-  fileName?: string;
-  xmlName?: string;
-  message?: string;
-};
-
 export async function analyzeAndSuggest(
   formData: FormData
 ): Promise<void> {
@@ -49,12 +40,16 @@ export async function analyzeAndSuggest(
       xmlDefinition,
     });
 
-    const identifiedIssues = analysisResult.issues.join('\n- ');
-    suggestionResult = await suggestFixesForIdentifiedIssues({
-      fileContent,
-      xmlDefinition,
-      identifiedIssues: `- ${identifiedIssues}`,
-    });
+    if (analysisResult.issues.length > 0) {
+      const identifiedIssues = analysisResult.issues.join('\n- ');
+      suggestionResult = await suggestFixesForIdentifiedIssues({
+        fileContent,
+        xmlDefinition,
+        identifiedIssues: `- ${identifiedIssues}`,
+      });
+    } else {
+      suggestionResult = { fixSuggestions: 'No issues found. Your file seems to be in good shape!' };
+    }
 
   } catch (error: any) {
     console.error('Error during analysis:', error);
@@ -87,10 +82,10 @@ export async function ask(
         xmlDefinition,
         question,
       });
-      stream.done(result.answer);
+      stream.done({ answer: result.answer });
     } catch (error) {
       console.error('Error asking about files:', error);
-      stream.done('Sorry, I encountered an error trying to answer your question.');
+      stream.done({ answer: 'Sorry, I encountered an error trying to answer your question.'});
     }
   })();
   

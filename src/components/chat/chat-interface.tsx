@@ -77,13 +77,15 @@ function ChatInterfaceContent() {
       ]);
       
       for await (const delta of readStreamableValue(output)) {
-        setMessages((prev) =>
-          prev.map((msg) =>
-            msg.id === assistantMessageId
-              ? { ...msg, content: delta || '' }
-              : msg
-          )
-        );
+        if (delta && typeof delta === 'object' && 'answer' in delta) {
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === assistantMessageId
+                ? { ...msg, content: delta.answer || '' }
+                : msg
+            )
+          );
+        }
       }
     } catch (error) {
       const errorMessage: Message = {
