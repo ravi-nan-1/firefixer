@@ -5,16 +5,16 @@ import { useSearchParams } from 'next/navigation';
 import { ask } from '@/app/actions';
 import { ArrowUp, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Textarea } from '../ui/textarea';
 import ChatMessage from './chat-message';
 import AnalysisResult from './analysis-result';
 import { Card, CardContent } from '../ui/card';
-import { Textarea } from '../ui/textarea';
+import { readStreamableValue } from 'ai/rsc';
 
 type Message = {
-  id: number;
+  id: string;
   role: 'user' | 'assistant';
-  content: React.ReactNode;
+  content: string | React.ReactNode;
 };
 
 function ChatInterfaceContent() {
@@ -33,17 +33,17 @@ function ChatInterfaceContent() {
 
   useEffect(() => {
     const initialAssistantMessage: Message = {
-      id: 1,
+      id: '1',
       role: 'assistant',
       content: <AnalysisResult issues={issues} suggestions={suggestions} />,
     };
     const userMessage: Message = {
-      id: 0,
+      id: '0',
       role: 'user',
       content: `Analyzing file: \`${fileName}\` with definition: \`${xmlName}\``,
     };
     setMessages([userMessage, initialAssistantMessage]);
-  }, [issues, suggestions, fileName, xmlName]);
+  }, []);
 
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -56,7 +56,7 @@ function ChatInterfaceContent() {
     if (!input.trim() || isLoading) return;
 
     const newUserMessage: Message = {
-      id: Date.now(),
+      id: Date.now().toString(),
       role: 'user',
       content: input,
     };
@@ -64,17 +64,28 @@ function ChatInterfaceContent() {
     setInput('');
     setIsLoading(true);
 
+    const assistantMessageId = (Date.now() + 1).toString();
+
     try {
-      const answer = await ask(fileContent, xmlDefinition, input);
-      const assistantMessage: Message = {
-        id: Date.now() + 1,
-        role: 'assistant',
-        content: answer,
-      };
-      setMessages((prev) => [...prev, assistantMessage]);
+      const { output } = await ask(fileContent, xmlDefinition, input);
+
+      setMessages((prev) => [
+        ...prev,
+        { id: assistantMessageId, role: 'assistant', content: '' },
+      ]);
+      
+      for await (const delta of readStreamableValue(output)) {
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === assistantMessageId
+              ? { ...msg, content: delta || '' }
+              : msg
+          )
+        );
+      }
     } catch (error) {
       const errorMessage: Message = {
-        id: Date.now() + 1,
+        id: assistantMessageId,
         role: 'assistant',
         content: "Sorry, I couldn't get a response. Please try again.",
       };
@@ -92,7 +103,7 @@ function ChatInterfaceContent() {
             {msg.content}
           </ChatMessage>
         ))}
-        {isLoading && (
+        {isLoading && messages[messages.length - 1]?.role !== 'assistant' && (
           <ChatMessage role="assistant">
             <Loader2 className="h-5 w-5 animate-spin" />
           </ChatMessage>

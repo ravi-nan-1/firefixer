@@ -40,7 +40,7 @@ function SubmitButton() {
 
 export default function UploadPage() {
   const { toast } = useToast();
-  const [state, formAction] = useActionState(analyzeAndSuggest, initialState);
+  const [state, formAction, isPending] = useActionState(analyzeAndSuggest, initialState);
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
@@ -51,7 +51,7 @@ export default function UploadPage() {
         description: state.message,
       });
     }
-  }, [state, toast]);
+  }, [state]);
 
   return (
     <div className="w-full max-w-2xl">

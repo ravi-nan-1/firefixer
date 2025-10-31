@@ -5,6 +5,7 @@ import { suggestFixesForIdentifiedIssues } from '@/ai/flows/suggest-fixes-for-id
 import { z } from 'zod';
 import { redirect } from 'next/navigation';
 import { askAboutFiles } from '@/ai/flows/ask-about-files';
+import { createStreamableValue } from 'ai/rsc';
 
 const formSchema = z.object({
   file: z.instanceof(File).refine((file) => file.size > 0, 'Your file is required.'),
@@ -80,15 +81,21 @@ export async function ask(
   question: string
 ) {
   'use server';
-  try {
-    const result = await askAboutFiles({
-      fileContent,
-      xmlDefinition,
-      question,
-    });
-    return result.answer;
-  } catch (error) {
-    console.error('Error asking about files:', error);
-    return 'Sorry, I encountered an error trying to answer your question.';
-  }
+  const stream = createStreamableValue();
+
+  (async () => {
+    try {
+      const result = await askAboutFiles({
+        fileContent,
+        xmlDefinition,
+        question,
+      });
+      stream.done(result.answer);
+    } catch (error) {
+      console.error('Error asking about files:', error);
+      stream.done('Sorry, I encountered an error trying to answer your question.');
+    }
+  })();
+  
+  return { output: stream.value };
 }
