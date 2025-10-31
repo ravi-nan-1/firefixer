@@ -3,6 +3,7 @@ import ChatInterface from '@/components/chat/chat-interface';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
 import { getSessionData } from '@/app/actions';
+import { Loader2 } from 'lucide-react';
 
 function ChatPageClient() {
   const searchParams = useSearchParams();
@@ -33,8 +34,9 @@ function ChatPageClient() {
   
   if (isLoading || !sessionId) {
       return (
-          <div className="flex items-center justify-center h-full">
-              <p>Loading chat...</p>
+          <div className="flex flex-col items-center justify-center h-full gap-2">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground"/>
+              <p className='text-muted-foreground'>Loading chat...</p>
           </div>
       )
   }
@@ -64,7 +66,10 @@ function ChatPageClient() {
 
 export default function ChatPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<div className="flex flex-col items-center justify-center h-full gap-2">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground"/>
+        <p className='text-muted-foreground'>Loading...</p>
+    </div>}>
       <ChatPageClient />
     </Suspense>
   )

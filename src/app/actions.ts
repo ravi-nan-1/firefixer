@@ -5,7 +5,6 @@ import { suggestFixesForIdentifiedIssues } from '@/ai/flows/suggest-fixes-for-id
 import { z } from 'zod';
 import { redirect } from 'next/navigation';
 import { askAboutFiles } from '@/ai/flows/ask-about-files';
-import { createStreamableValue } from 'ai/rsc';
 
 const formSchema = z.object({
   file: z.instanceof(File).refine((file) => file.size > 0, 'Your file is required.'),
@@ -102,5 +101,6 @@ export async function ask(
 }
 
 export async function getSessionData(sessionId: string) {
+    'use server';
     return temporaryDataStore[sessionId] || null;
 }
