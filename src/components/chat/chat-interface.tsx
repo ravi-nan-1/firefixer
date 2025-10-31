@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ask } from '@/app/actions';
 import { ArrowUp, Loader2 } from 'lucide-react';
@@ -24,26 +24,28 @@ function ChatInterfaceContent() {
   const [isLoading, setIsLoading] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
-  const issues = JSON.parse(searchParams.get('issues') || '[]');
-  const suggestions = searchParams.get('suggestions') || '';
-  const fileName = searchParams.get('fileName') || '';
-  const xmlName = searchParams.get('xmlName') || '';
-  const fileContent = searchParams.get('fileContent') || '';
-  const xmlDefinition = searchParams.get('xmlDefinition') || '';
-
+  const issues = useMemo(() => JSON.parse(searchParams.get('issues') || '[]'), [searchParams]);
+  const suggestions = useMemo(() => searchParams.get('suggestions') || '', [searchParams]);
+  const fileName = useMemo(() => searchParams.get('fileName') || '', [searchParams]);
+  const xmlName = useMemo(() => searchParams.get('xmlName') || '', [searchParams]);
+  const fileContent = useMemo(() => searchParams.get('fileContent') || '', [searchParams]);
+  const xmlDefinition = useMemo(() => searchParams.get('xmlDefinition') || '', [searchParams]);
+  
   useEffect(() => {
-    const initialAssistantMessage: Message = {
-      id: '1',
-      role: 'assistant',
-      content: <AnalysisResult issues={issues} suggestions={suggestions} />,
-    };
-    const userMessage: Message = {
-      id: '0',
-      role: 'user',
-      content: `Analyzing file: \`${fileName}\` with definition: \`${xmlName}\``,
-    };
-    setMessages([userMessage, initialAssistantMessage]);
-  }, []);
+    if (fileName && xmlName) {
+      const initialAssistantMessage: Message = {
+        id: '1',
+        role: 'assistant',
+        content: <AnalysisResult issues={issues} suggestions={suggestions} />,
+      };
+      const userMessage: Message = {
+        id: '0',
+        role: 'user',
+        content: `Analyzing file: \`${fileName}\` with definition: \`${xmlName}\``,
+      };
+      setMessages([userMessage, initialAssistantMessage]);
+    }
+  }, [issues, suggestions, fileName, xmlName]);
 
   useEffect(() => {
     if (chatContainerRef.current) {

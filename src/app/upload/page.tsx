@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { redirect } from 'next/navigation';
 
 const initialState: AnalysisState = {
   status: 'idle',
@@ -50,11 +51,8 @@ export default function UploadPage() {
         title: 'Validation Error',
         description: state.message,
       });
-      // Reset status to idle to avoid re-showing the toast on re-renders.
-      // This is a temporary workaround for state management in useActionState.
-      // A more robust solution might involve a state reset mechanism.
-      state.status = 'idle'; 
-      state.message = undefined;
+      // Redirect to clear the form action state
+      redirect('/upload');
     }
   }, [state, toast]);
 
