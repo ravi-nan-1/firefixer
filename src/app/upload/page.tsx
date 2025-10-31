@@ -1,7 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
-import { useFormStatus } from 'react-dom';
+import { useState } from 'react';
 import { analyzeAndSuggest } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowUp, File as FileIcon, FileCode, Loader2 } from 'lucide-react';
@@ -15,39 +14,24 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-
-function SubmitButton() {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" disabled={pending} className="w-full">
-      {pending ? (
-        <>
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          Analyzing...
-        </>
-      ) : (
-        <>
-          <ArrowUp className="mr-2 h-4 w-4" />
-          Analyze Files
-        </>
-      )}
-    </Button>
-  );
-}
+import { useAnalysis } from '@/context/AnalysisContext';
 
 export default function UploadPage() {
   const { toast } = useToast();
-  const formRef = useRef<HTMLFormElement>(null);
+  const { setAnalysisResult, setFileContent, setXmlDefinition, setFileName, setXmlName } = useAnalysis();
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const [xml, setXml] = useState<File | null>(null);
 
-  const handleAction = async (formData: FormData) => {
-    const file = formData.get('file') as File;
-    const xml = formData.get('xml') as File;
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
 
     if (!file || file.size === 0) {
       toast({
         variant: 'destructive',
         title: 'Validation Error',
-        description: 'Your file is required.',
+        description: 'Content file is required.',
       });
       return;
     }
@@ -60,22 +44,44 @@ export default function UploadPage() {
       });
       return;
     }
-    
+
+    setIsAnalyzing(true);
+    setAnalysisResult(null);
+
     try {
-        await analyzeAndSuggest(formData);
-    } catch(error: any) {
-        // NEXT_REDIRECT is thrown by redirect(), we don't want to show a toast for that.
-        if (error.message.includes('NEXT_REDIRECT')) {
-          throw error;
-        }
-        toast({
-            variant: 'destructive',
-            title: 'Analysis Error',
-            description: error.message || 'An unknown error occurred.',
-        });
+      const fileContent = await file.text();
+      const xmlDefinition = await xml.text();
+      
+      setFileContent(fileContent);
+      setXmlDefinition(xmlDefinition);
+      setFileName(file.name);
+      setXmlName(xml.name);
+
+      const result = await analyzeAndSuggest({ fileContent, xmlDefinition });
+
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      setAnalysisResult({
+        issues: result.issues || [],
+        suggestions: result.suggestions || 'No suggestions available.',
+      });
+
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Analysis Error',
+        description: error.message || 'An unknown error occurred.',
+      });
+      // Clear state on error so user can retry
+      setAnalysisResult(null);
+      setFileContent(null);
+      setXmlDefinition(null);
+    } finally {
+      setIsAnalyzing(false);
     }
   };
-
 
   return (
     <div className="w-full max-w-2xl">
@@ -87,7 +93,7 @@ export default function UploadPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="p-6 pt-0">
-          <form ref={formRef} action={handleAction} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label
@@ -97,7 +103,7 @@ export default function UploadPage() {
                   <FileIcon className="h-4 w-4" />
                   Content File
                 </Label>
-                <Input id="file" name="file" type="file" />
+                <Input id="file" name="file" type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} />
               </div>
               <div className="space-y-2">
                 <Label
@@ -107,10 +113,22 @@ export default function UploadPage() {
                   <FileCode className="h-4 w-4" />
                   XML Definition
                 </Label>
-                <Input id="xml" name="xml" type="file" accept=".xml,text/xml" />
+                <Input id="xml" name="xml" type="file" accept=".xml,text/xml" onChange={(e) => setXml(e.target.files?.[0] || null)} />
               </div>
             </div>
-            <SubmitButton />
+            <Button type="submit" disabled={isAnalyzing} className="w-full">
+              {isAnalyzing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Analyzing...
+                </>
+              ) : (
+                <>
+                  <ArrowUp className="mr-2 h-4 w-4" />
+                  Analyze Files
+                </>
+              )}
+            </Button>
           </form>
         </CardContent>
       </Card>

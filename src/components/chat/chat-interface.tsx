@@ -9,6 +9,7 @@ import ChatMessage from './chat-message';
 import AnalysisResult from './analysis-result';
 import { Card, CardContent } from '../ui/card';
 import { readStreamableValue } from 'ai/rsc';
+import { useAnalysis } from '@/context/AnalysisContext';
 
 type Message = {
   id: string;
@@ -23,7 +24,6 @@ type ChatInterfaceProps = {
   xmlName: string;
   fileContent: string;
   xmlDefinition: string;
-  sessionId: string;
 };
 
 export default function ChatInterface({
@@ -31,13 +31,15 @@ export default function ChatInterface({
   suggestions,
   fileName,
   xmlName,
-  sessionId,
+  fileContent,
+  xmlDefinition
 }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
-  
+  const { clearAnalysis } = useAnalysis();
+
   useEffect(() => {
     if (fileName && xmlName) {
       const initialAssistantMessage: Message = {
@@ -70,6 +72,7 @@ export default function ChatInterface({
       content: input,
     };
     setMessages((prev) => [...prev, newUserMessage]);
+    const question = input;
     setInput('');
     setIsLoading(true);
 
@@ -80,7 +83,7 @@ export default function ChatInterface({
     ]);
 
     try {
-      const { output } = await ask(sessionId, input);
+      const { output } = await ask({ question, fileContent, xmlDefinition });
       
       let finalContent = '';
       for await (const delta of readStreamableValue(output)) {
@@ -110,6 +113,9 @@ export default function ChatInterface({
 
   return (
     <div className="flex flex-col h-full w-full max-w-4xl">
+       <Button onClick={clearAnalysis} variant="outline" className="mb-4 self-start">
+        Start Over
+      </Button>
       <div ref={chatContainerRef} className="flex-1 overflow-y-auto space-y-6 p-1 pr-4">
         {messages.map((msg) => (
           <ChatMessage key={msg.id} role={msg.role}>

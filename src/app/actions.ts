@@ -2,48 +2,28 @@
 
 import { analyzeFileForIssues } from '@/ai/flows/analyze-file-for-issues';
 import { suggestFixesForIdentifiedIssues } from '@/ai/flows/suggest-fixes-for-identified-issues';
-import { z } from 'zod';
-import { redirect } from 'next/navigation';
 import { askAboutFiles } from '@/ai/flows/ask-about-files';
+import { z } from 'zod';
+import { createStreamableValue } from 'ai/rsc';
 
-const formSchema = z.object({
-  file: z.instanceof(File).refine((file) => file.size > 0, 'Your file is required.'),
-  xml: z.instanceof(File).refine((file) => file.size > 0, 'XML definition file is required.'),
+
+const analyzeSchema = z.object({
+  fileContent: z.string(),
+  xmlDefinition: z.string(),
 });
 
-// This is a temporary in-memory store.
-// In a real-world application, you might use a database or a server-side cache.
-const temporaryDataStore: { [key: string]: any } = {};
-
-
 export async function analyzeAndSuggest(
-  formData: FormData
-): Promise<void> {
-  const validatedFields = formSchema.safeParse({
-    file: formData.get('file'),
-    xml: formData.get('xml'),
-  });
-
-  if (!validatedFields.success) {
-    const fieldErrors = validatedFields.error.flatten().fieldErrors;
-    throw new Error(fieldErrors.file?.[0] || fieldErrors.xml?.[0] || 'Invalid file inputs.');
-  }
-
-  const { file, xml } = validatedFields.data;
-  let analysisResult;
-  let suggestionResult;
-  let fileContent;
-  let xmlDefinition;
+  input: z.infer<typeof analyzeSchema>
+) {
+  const { fileContent, xmlDefinition } = input;
 
   try {
-    fileContent = await file.text();
-    xmlDefinition = await xml.text();
-
-    analysisResult = await analyzeFileForIssues({
+    const analysisResult = await analyzeFileForIssues({
       fileContent,
       xmlDefinition,
     });
 
+    let suggestionResult;
     if (analysisResult.issues.length > 0) {
       const identifiedIssues = analysisResult.issues.join('\n- ');
       suggestionResult = await suggestFixesForIdentifiedIssues({
@@ -55,52 +35,58 @@ export async function analyzeAndSuggest(
       suggestionResult = { fixSuggestions: 'No issues found. Your file seems to be in good shape!' };
     }
 
+    return {
+      issues: analysisResult.issues,
+      suggestions: suggestionResult.fixSuggestions,
+    };
+
   } catch (error: any) {
     console.error('Error during analysis:', error);
-    if (error.message.includes('NEXT_REDIRECT')) {
-        throw error;
-    }
-    throw new Error(error.message || 'An unexpected error occurred while processing the files. Please try again.');
+    // Ensure we always return a serializable error object
+    return { error: error.message || 'An unexpected error occurred during analysis.' };
   }
-
-  const sessionId = Date.now().toString();
-  temporaryDataStore[sessionId] = {
-    fileContent,
-    xmlDefinition,
-  };
-
-  const params = new URLSearchParams();
-  params.set('issues', JSON.stringify(analysisResult.issues));
-  params.set('suggestions', suggestionResult.fixSuggestions);
-  params.set('fileName', file.name);
-  params.set('xmlName', xml.name);
-  params.set('sessionId', sessionId);
-
-  redirect(`/chat?${params.toString()}`);
 }
+
+const askSchema = z.object({
+  question: z.string(),
+  fileContent: z.string(),
+  xmlDefinition: z.string(),
+});
 
 export async function ask(
-  sessionId: string,
-  question: string
+  input: z.infer<typeof askSchema>
 ) {
   'use server';
-
-  const data = temporaryDataStore[sessionId];
-  if (!data) {
-    // In a real app, you'd want more robust error handling
-    throw new Error('Session not found. Please start over.');
-  }
   
-  const { answer } = await askAboutFiles({
-    fileContent: data.fileContent,
-    xmlDefinition: data.xmlDefinition,
-    question,
-  });
-  
-  return { output: answer };
-}
+  const stream = createStreamableValue('');
 
-export async function getSessionData(sessionId: string) {
-    'use server';
-    return temporaryDataStore[sessionId] || null;
+  (async () => {
+    const { stream: responseStream } = await ai.generateStream({
+      prompt: `You are an expert file analyst. You have been provided with the content of a file and an XML definition. A user will ask you a question about this file. Your task is to answer the question based on the provided context.
+
+      File Content:
+      '''
+      ${input.fileContent}
+      '''
+      
+      XML Definition:
+      '''
+      ${input.xmlDefinition}
+      '''
+      
+      User's Question:
+      ${input.question}
+      
+      Provide a clear and concise answer to the question.`,
+      // Note: We're not using structured output here for the streaming chat response.
+      // The output will be plain text.
+    });
+    
+    for await (const chunk of responseStream) {
+      stream.update(chunk.text);
+    }
+    stream.done();
+  })();
+  
+  return { output: stream.value };
 }
