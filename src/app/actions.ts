@@ -3,14 +3,12 @@
 import { analyzeFileForIssues } from '@/ai/flows/analyze-file-for-issues';
 import { suggestFixesForIdentifiedIssues } from '@/ai/flows/suggest-fixes-for-identified-issues';
 import { z } from 'zod';
+import { redirect } from 'next/navigation';
+import { askAboutFiles } from '@/ai/flows/ask-about-files';
 
 const formSchema = z.object({
-  file: z
-    .instanceof(File)
-    .refine((file) => file.size > 0, 'Your file is required.'),
-  xml: z
-    .instanceof(File)
-    .refine((file) => file.size > 0, 'XML definition file is required.'),
+  file: z.instanceof(File).refine((file) => file.size > 0, 'Your file is required.'),
+  xml: z.instanceof(File).refine((file) => file.size > 0, 'XML definition file is required.'),
 });
 
 export type AnalysisState = {
@@ -35,10 +33,7 @@ export async function analyzeAndSuggest(
     const fieldErrors = validatedFields.error.flatten().fieldErrors;
     return {
       status: 'error',
-      message:
-        fieldErrors.file?.[0] ||
-        fieldErrors.xml?.[0] ||
-        'Invalid file inputs.',
+      message: fieldErrors.file?.[0] || fieldErrors.xml?.[0] || 'Invalid file inputs.',
     };
   }
 
@@ -53,37 +48,47 @@ export async function analyzeAndSuggest(
       xmlDefinition,
     });
 
-    if (!analysisResult.issues || analysisResult.issues.length === 0) {
-      return {
-        status: 'success',
-        issues: [],
-        suggestions:
-          'No issues found in the file. It appears to be compliant with the provided XML definition.',
-        fileName: file.name,
-        xmlName: xml.name,
-      };
-    }
-
     const identifiedIssues = analysisResult.issues.join('\n- ');
     const suggestionResult = await suggestFixesForIdentifiedIssues({
       fileContent,
       xmlDefinition,
       identifiedIssues: `- ${identifiedIssues}`,
     });
+    
+    const params = new URLSearchParams();
+    params.set('issues', JSON.stringify(analysisResult.issues));
+    params.set('suggestions', suggestionResult.fixSuggestions);
+    params.set('fileName', file.name);
+    params.set('xmlName', xml.name);
+    params.set('fileContent', fileContent);
+    params.set('xmlDefinition', xmlDefinition);
 
-    return {
-      status: 'success',
-      issues: analysisResult.issues,
-      suggestions: suggestionResult.fixSuggestions,
-      fileName: file.name,
-      xmlName: xml.name,
-    };
+    redirect(`/chat?${params.toString()}`);
+
   } catch (error) {
     console.error('Error during analysis:', error);
     return {
       status: 'error',
-      message:
-        'An unexpected error occurred while processing the files. Please try again.',
+      message: 'An unexpected error occurred while processing the files. Please try again.',
     };
+  }
+}
+
+export async function ask(
+  fileContent: string,
+  xmlDefinition: string,
+  question: string
+) {
+  'use server';
+  try {
+    const result = await askAboutFiles({
+      fileContent,
+      xmlDefinition,
+      question,
+    });
+    return result.answer;
+  } catch (error) {
+    console.error('Error asking about files:', error);
+    return 'Sorry, I encountered an error trying to answer your question.';
   }
 }

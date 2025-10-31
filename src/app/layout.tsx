@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { cn } from '@/lib/utils';
 import { Toaster } from "@/components/ui/toaster";
+import Header from '@/components/layout/header';
 
 export const metadata: Metadata = {
   title: 'FileFixer AI',
@@ -23,8 +24,11 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className={cn('font-body antialiased', 'min-h-screen bg-background font-sans')}>
-        {children}
+      <body className={cn('font-body antialiased', 'min-h-screen bg-background font-sans flex flex-col')}>
+        <Header />
+        <main className="flex-1 flex flex-col items-center justify-start py-6 md:py-8 px-4 overflow-hidden">
+          {children}
+        </main>
         <Toaster />
       </body>
     </html>

@@ -1,21 +1,15 @@
 'use client';
 
-import { useEffect, useRef, useState, useActionState } from 'react';
-import { useFormStatus } from 'react-dom';
-import { analyzeAndSuggest, type AnalysisState } from '@/app/actions';
-import { useToast } from '@/hooks/use-toast';
-import {
-  ArrowUp,
-  File as FileIcon,
-  FileCode,
-  Loader2,
-} from 'lucide-react';
+import { Suspense, useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { ask } from '@/app/actions';
+import { ArrowUp, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import ChatMessage from './chat-message';
 import AnalysisResult from './analysis-result';
 import { Card, CardContent } from '../ui/card';
-import { Label } from '../ui/label';
+import { Textarea } from '../ui/textarea';
 
 type Message = {
   id: number;
@@ -23,43 +17,33 @@ type Message = {
   content: React.ReactNode;
 };
 
-const initialState: AnalysisState = {
-  status: 'idle',
-};
+function ChatInterfaceContent() {
+  const searchParams = useSearchParams();
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
-function SubmitButton() {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" disabled={pending} className="w-full">
-      {pending ? (
-        <>
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          Analyzing...
-        </>
-      ) : (
-        <>
-          <ArrowUp className="mr-2 h-4 w-4" />
-          Analyze Files
-        </>
-      )}
-    </Button>
-  );
-}
+  const issues = JSON.parse(searchParams.get('issues') || '[]');
+  const suggestions = searchParams.get('suggestions') || '';
+  const fileName = searchParams.get('fileName') || '';
+  const xmlName = searchParams.get('xmlName') || '';
+  const fileContent = searchParams.get('fileContent') || '';
+  const xmlDefinition = searchParams.get('xmlDefinition') || '';
 
-export default function ChatInterface() {
-  const { toast } = useToast();
-  const [messages, setMessages] = useState<Message[]>([
-    {
+  useEffect(() => {
+    const initialAssistantMessage: Message = {
       id: 1,
       role: 'assistant',
-      content:
-        'Welcome to FileFixer AI! Please upload your file and its corresponding XML definition to begin the analysis.',
-    },
-  ]);
-  const [state, formAction] = useActionState(analyzeAndSuggest, initialState);
-
-  const formRef = useRef<HTMLFormElement>(null);
-  const chatContainerRef = useRef<HTMLDivElement>(null);
+      content: <AnalysisResult issues={issues} suggestions={suggestions} />,
+    };
+    const userMessage: Message = {
+      id: 0,
+      role: 'user',
+      content: `Analyzing file: \`${fileName}\` with definition: \`${xmlName}\``,
+    };
+    setMessages([userMessage, initialAssistantMessage]);
+  }, [issues, suggestions, fileName, xmlName]);
 
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -67,76 +51,91 @@ export default function ChatInterface() {
     }
   }, [messages]);
 
-  useEffect(() => {
-    if (state.status === 'error' && state.message) {
-      toast({
-        variant: 'destructive',
-        title: 'Validation Error',
-        description: state.message,
-      });
-    } else if (state.status === 'success') {
-      const userMessage: Message = {
-        id: Date.now(),
-        role: 'user',
-        content: `Analyzing file: \`${state.fileName}\` with definition: \`${state.xmlName}\``,
-      };
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || isLoading) return;
 
+    const newUserMessage: Message = {
+      id: Date.now(),
+      role: 'user',
+      content: input,
+    };
+    setMessages((prev) => [...prev, newUserMessage]);
+    setInput('');
+    setIsLoading(true);
+
+    try {
+      const answer = await ask(fileContent, xmlDefinition, input);
       const assistantMessage: Message = {
         id: Date.now() + 1,
         role: 'assistant',
-        content: (
-          <AnalysisResult
-            issues={state.issues ?? []}
-            suggestions={state.suggestions ?? ''}
-          />
-        ),
+        content: answer,
       };
-
-      setMessages((prev) => [...prev, userMessage, assistantMessage]);
-      formRef.current?.reset();
+      setMessages((prev) => [...prev, assistantMessage]);
+    } catch (error) {
+      const errorMessage: Message = {
+        id: Date.now() + 1,
+        role: 'assistant',
+        content: "Sorry, I couldn't get a response. Please try again.",
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
     }
-  }, [state, toast]);
+  };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full w-full max-w-4xl">
       <div ref={chatContainerRef} className="flex-1 overflow-y-auto space-y-6 p-1 pr-4">
         {messages.map((msg) => (
           <ChatMessage key={msg.id} role={msg.role}>
             {msg.content}
           </ChatMessage>
         ))}
+        {isLoading && (
+          <ChatMessage role="assistant">
+            <Loader2 className="h-5 w-5 animate-spin" />
+          </ChatMessage>
+        )}
       </div>
       <div className="mt-auto pt-4">
         <Card className="shadow-xl rounded-xl">
           <CardContent className="p-4">
-            <form ref={formRef} action={formAction} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="file" className="flex items-center gap-2 font-medium">
-                    <FileIcon className="h-4 w-4" />
-                    Content File
-                  </Label>
-                  <Input id="file" name="file" type="file" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="xml" className="flex items-center gap-2 font-medium">
-                    <FileCode className="h-4 w-4" />
-                    XML Definition
-                  </Label>
-                  <Input
-                    id="xml"
-                    name="xml"
-                    type="file"
-                    required
-                    accept=".xml,text/xml"
-                  />
-                </div>
-              </div>
-              <SubmitButton />
+            <form onSubmit={handleSendMessage} className="flex gap-2">
+              <Textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Ask a follow-up question..."
+                className="flex-1"
+                rows={1}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendMessage(e);
+                  }
+                }}
+              />
+              <Button type="submit" disabled={isLoading || !input.trim()} size="icon">
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <ArrowUp className="h-4 w-4" />
+                )}
+                <span className="sr-only">Send</span>
+              </Button>
             </form>
           </CardContent>
         </Card>
       </div>
     </div>
   );
+}
+
+
+export default function ChatInterface() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <ChatInterfaceContent />
+        </Suspense>
+    )
 }
