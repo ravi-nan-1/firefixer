@@ -1,23 +1,20 @@
 'use client';
 
-import { useActionState, useRef, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
 import { useFormStatus } from 'react-dom';
-import { analyzeAndSuggest, type AnalysisState } from '@/app/actions';
+import { analyzeAndSuggest } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
-import {
-  ArrowUp,
-  File as FileIcon,
-  FileCode,
-  Loader2,
-} from 'lucide-react';
+import { ArrowUp, File as FileIcon, FileCode, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-
-const initialState: AnalysisState = {
-  status: 'idle',
-};
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -40,18 +37,41 @@ function SubmitButton() {
 
 export default function UploadPage() {
   const { toast } = useToast();
-  const [state, formAction] = useActionState(analyzeAndSuggest, initialState);
   const formRef = useRef<HTMLFormElement>(null);
 
-  useEffect(() => {
-    if (state.status === 'error' && state.message) {
+  const handleAction = async (formData: FormData) => {
+    const file = formData.get('file') as File;
+    const xml = formData.get('xml') as File;
+
+    if (!file || file.size === 0) {
       toast({
         variant: 'destructive',
         title: 'Validation Error',
-        description: state.message,
+        description: 'Your file is required.',
+      });
+      return;
+    }
+
+    if (!xml || xml.size === 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Validation Error',
+        description: 'XML definition file is required.',
+      });
+      return;
+    }
+    
+    const result = await analyzeAndSuggest(new FormData(formRef.current!));
+
+    if (result && result.status === 'error') {
+       toast({
+        variant: 'destructive',
+        title: 'Analysis Error',
+        description: result.message,
       });
     }
-  }, [state, toast]);
+  };
+
 
   return (
     <div className="w-full max-w-2xl">
@@ -63,27 +83,27 @@ export default function UploadPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="p-6 pt-0">
-          <form ref={formRef} action={formAction} className="space-y-4">
+          <form ref={formRef} action={handleAction} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="file" className="flex items-center gap-2 font-medium">
+                <Label
+                  htmlFor="file"
+                  className="flex items-center gap-2 font-medium"
+                >
                   <FileIcon className="h-4 w-4" />
                   Content File
                 </Label>
-                <Input id="file" name="file" type="file" required />
+                <Input id="file" name="file" type="file" />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="xml" className="flex items-center gap-2 font-medium">
+                <Label
+                  htmlFor="xml"
+                  className="flex items-center gap-2 font-medium"
+                >
                   <FileCode className="h-4 w-4" />
                   XML Definition
                 </Label>
-                <Input
-                  id="xml"
-                  name="xml"
-                  type="file"
-                  required
-                  accept=".xml,text/xml"
-                />
+                <Input id="xml" name="xml" type="file" accept=".xml,text/xml" />
               </div>
             </div>
             <SubmitButton />

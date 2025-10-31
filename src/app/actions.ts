@@ -22,9 +22,8 @@ export type AnalysisState = {
 };
 
 export async function analyzeAndSuggest(
-  prevState: AnalysisState,
   formData: FormData
-): Promise<AnalysisState> {
+): Promise<AnalysisState | void> {
   const validatedFields = formSchema.safeParse({
     file: formData.get('file'),
     xml: formData.get('xml'),
