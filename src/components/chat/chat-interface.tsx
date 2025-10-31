@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { useFormState, useFormStatus } from 'react-dom';
+import { useEffect, useRef, useState, useActionState } from 'react';
+import { useFormStatus } from 'react-dom';
 import { analyzeAndSuggest, type AnalysisState } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -56,7 +56,7 @@ export default function ChatInterface() {
         'Welcome to FileFixer AI! Please upload your file and its corresponding XML definition to begin the analysis.',
     },
   ]);
-  const [state, formAction] = useFormState(analyzeAndSuggest, initialState);
+  const [state, formAction] = useActionState(analyzeAndSuggest, initialState);
 
   const formRef = useRef<HTMLFormElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
