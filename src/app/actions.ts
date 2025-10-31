@@ -61,8 +61,9 @@ export async function analyzeAndSuggest(
   params.set('suggestions', suggestionResult.fixSuggestions);
   params.set('fileName', file.name);
   params.set('xmlName', xml.name);
-  params.set('fileContent', fileContent);
-  params.set('xmlDefinition', xmlDefinition);
+  // Do not pass content in URL
+  // params.set('fileContent', fileContent);
+  // params.set('xmlDefinition', xmlDefinition);
 
   redirect(`/chat?${params.toString()}`);
 }

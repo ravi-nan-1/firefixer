@@ -1,7 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useRef, useState, useMemo } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 import { ask } from '@/app/actions';
 import { ArrowUp, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -17,19 +16,27 @@ type Message = {
   content: string | React.ReactNode;
 };
 
-function ChatInterfaceContent() {
-  const searchParams = useSearchParams();
+type ChatInterfaceProps = {
+  issues: string[];
+  suggestions: string;
+  fileName: string;
+  xmlName: string;
+  fileContent: string;
+  xmlDefinition: string;
+};
+
+export default function ChatInterface({
+  issues,
+  suggestions,
+  fileName,
+  xmlName,
+  fileContent,
+  xmlDefinition
+}: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
-
-  const issues = useMemo(() => JSON.parse(searchParams.get('issues') || '[]'), [searchParams]);
-  const suggestions = useMemo(() => searchParams.get('suggestions') || '', [searchParams]);
-  const fileName = useMemo(() => searchParams.get('fileName') || '', [searchParams]);
-  const xmlName = useMemo(() => searchParams.get('xmlName') || '', [searchParams]);
-  const fileContent = useMemo(() => searchParams.get('fileContent') || '', [searchParams]);
-  const xmlDefinition = useMemo(() => searchParams.get('xmlDefinition') || '', [searchParams]);
   
   useEffect(() => {
     if (fileName && xmlName) {
@@ -87,6 +94,7 @@ function ChatInterfaceContent() {
         );
       }
     } catch (error) {
+      console.error(error);
       const errorMessage: Message = {
         id: assistantMessageId,
         role: 'assistant',
@@ -145,13 +153,4 @@ function ChatInterfaceContent() {
       </div>
     </div>
   );
-}
-
-
-export default function ChatInterface() {
-    return (
-        <Suspense fallback={<div>Loading...</div>}>
-            <ChatInterfaceContent />
-        </Suspense>
-    )
 }
