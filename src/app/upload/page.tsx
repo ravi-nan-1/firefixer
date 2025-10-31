@@ -40,7 +40,7 @@ function SubmitButton() {
 
 export default function UploadPage() {
   const { toast } = useToast();
-  const [state, formAction, isPending] = useActionState(analyzeAndSuggest, initialState);
+  const [state, formAction] = useActionState(analyzeAndSuggest, initialState);
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
@@ -50,8 +50,13 @@ export default function UploadPage() {
         title: 'Validation Error',
         description: state.message,
       });
+      // Reset status to idle to avoid re-showing the toast on re-renders.
+      // This is a temporary workaround for state management in useActionState.
+      // A more robust solution might involve a state reset mechanism.
+      state.status = 'idle'; 
+      state.message = undefined;
     }
-  }, [state]);
+  }, [state, toast]);
 
   return (
     <div className="w-full max-w-2xl">
