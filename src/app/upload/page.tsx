@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useRef } from 'react';
+import { useActionState, useRef, useEffect } from 'react';
 import { useFormStatus } from 'react-dom';
 import { analyzeAndSuggest, type AnalysisState } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
@@ -43,13 +43,15 @@ export default function UploadPage() {
   const [state, formAction] = useActionState(analyzeAndSuggest, initialState);
   const formRef = useRef<HTMLFormElement>(null);
 
-  if (state.status === 'error' && state.message) {
-    toast({
-      variant: 'destructive',
-      title: 'Validation Error',
-      description: state.message,
-    });
-  }
+  useEffect(() => {
+    if (state.status === 'error' && state.message) {
+      toast({
+        variant: 'destructive',
+        title: 'Validation Error',
+        description: state.message,
+      });
+    }
+  }, [state, toast]);
 
   return (
     <div className="w-full max-w-2xl">
