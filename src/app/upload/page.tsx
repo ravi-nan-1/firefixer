@@ -15,7 +15,6 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { useRouter } from 'next/navigation';
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -39,7 +38,6 @@ function SubmitButton() {
 export default function UploadPage() {
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
-  const router = useRouter();
 
   const handleAction = async (formData: FormData) => {
     const file = formData.get('file') as File;
@@ -64,25 +62,17 @@ export default function UploadPage() {
     }
     
     try {
-        // Since we can't pass large data via URL, we'll push it to history.state
-        // This is a bit of a hack, but it works for client-side navigation.
-        // A more robust solution might involve a state management library.
-        const fileContent = await file.text();
-        const xmlDefinition = await xml.text();
-        history.replaceState({ ...history.state, fileContent, xmlDefinition }, '');
-
         await analyzeAndSuggest(formData);
-
     } catch(error: any) {
+        // NEXT_REDIRECT is thrown by redirect(), we don't want to show a toast for that.
         if (error.message.includes('NEXT_REDIRECT')) {
-          // This is expected, do nothing.
-        } else {
-            toast({
-                variant: 'destructive',
-                title: 'Analysis Error',
-                description: error.message,
-            });
+          throw error;
         }
+        toast({
+            variant: 'destructive',
+            title: 'Analysis Error',
+            description: error.message || 'An unknown error occurred.',
+        });
     }
   };
 

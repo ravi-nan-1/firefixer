@@ -12,6 +12,11 @@ const formSchema = z.object({
   xml: z.instanceof(File).refine((file) => file.size > 0, 'XML definition file is required.'),
 });
 
+// This is a temporary in-memory store.
+// In a real-world application, you might use a database or a server-side cache.
+const temporaryDataStore: { [key: string]: any } = {};
+
+
 export async function analyzeAndSuggest(
   formData: FormData
 ): Promise<void> {
@@ -53,33 +58,49 @@ export async function analyzeAndSuggest(
 
   } catch (error: any) {
     console.error('Error during analysis:', error);
+    if (error.message.includes('NEXT_REDIRECT')) {
+        throw error;
+    }
     throw new Error(error.message || 'An unexpected error occurred while processing the files. Please try again.');
   }
+
+  const sessionId = Date.now().toString();
+  temporaryDataStore[sessionId] = {
+    fileContent,
+    xmlDefinition,
+  };
 
   const params = new URLSearchParams();
   params.set('issues', JSON.stringify(analysisResult.issues));
   params.set('suggestions', suggestionResult.fixSuggestions);
   params.set('fileName', file.name);
   params.set('xmlName', xml.name);
-  // Do not pass content in URL
-  // params.set('fileContent', fileContent);
-  // params.set('xmlDefinition', xmlDefinition);
+  params.set('sessionId', sessionId);
 
   redirect(`/chat?${params.toString()}`);
 }
 
 export async function ask(
-  fileContent: string,
-  xmlDefinition: string,
+  sessionId: string,
   question: string
 ) {
   'use server';
+
+  const data = temporaryDataStore[sessionId];
+  if (!data) {
+    // In a real app, you'd want more robust error handling
+    throw new Error('Session not found. Please start over.');
+  }
   
   const { answer } = await askAboutFiles({
-    fileContent,
-    xmlDefinition,
+    fileContent: data.fileContent,
+    xmlDefinition: data.xmlDefinition,
     question,
   });
   
   return { output: answer };
+}
+
+export async function getSessionData(sessionId: string) {
+    return temporaryDataStore[sessionId] || null;
 }

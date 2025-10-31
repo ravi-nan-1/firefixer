@@ -1,42 +1,53 @@
 'use client';
 import ChatInterface from '@/components/chat/chat-interface';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
+import { getSessionData } from '@/app/actions';
 
 function ChatPageClient() {
   const searchParams = useSearchParams();
-  const router = useRouter();
-
   const [fileContent, setFileContent] = useState<string | null>(null);
   const [xmlDefinition, setXmlDefinition] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    // This is a workaround to get the file content from the previous page's state
-    // A better solution would be to use a client-side cache or a state management library
-    const navigationState = history.state;
-    if (navigationState && navigationState.fileContent && navigationState.xmlDefinition) {
-        setFileContent(navigationState.fileContent);
-        setXmlDefinition(navigationState.xmlDefinition);
-    }
-
-    // Clear the state after reading it
-    const newPath = window.location.pathname + '?' + searchParams.toString();
-    history.replaceState({}, '', newPath);
-
-  }, [searchParams, router]);
-  
   const issues = JSON.parse(searchParams.get('issues') || '[]');
   const suggestions = searchParams.get('suggestions') || '';
   const fileName = searchParams.get('fileName') || '';
   const xmlName = searchParams.get('xmlName') || '';
+  const sessionId = searchParams.get('sessionId');
 
-  if (fileContent === null || xmlDefinition === null) {
+
+  useEffect(() => {
+    if (sessionId) {
+      getSessionData(sessionId).then(data => {
+        if (data) {
+          setFileContent(data.fileContent);
+          setXmlDefinition(data.xmlDefinition);
+        }
+        setIsLoading(false);
+      });
+    } else {
+        setIsLoading(false);
+    }
+  }, [sessionId]);
+  
+  if (isLoading || !sessionId) {
       return (
           <div className="flex items-center justify-center h-full">
               <p>Loading chat...</p>
           </div>
       )
   }
+
+  if (!fileContent || !xmlDefinition) {
+    return (
+        <div className="flex flex-col items-center justify-center h-full text-center">
+            <p className='text-lg font-semibold'>Session Expired or Invalid</p>
+            <p className='text-muted-foreground'>Could not load file data. Please start over by uploading your files again.</p>
+        </div>
+    )
+  }
+
 
   return (
     <ChatInterface
@@ -46,6 +57,7 @@ function ChatPageClient() {
       xmlName={xmlName}
       fileContent={fileContent}
       xmlDefinition={xmlDefinition}
+      sessionId={sessionId}
     />
   );
 }

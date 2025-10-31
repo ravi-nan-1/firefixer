@@ -23,6 +23,7 @@ type ChatInterfaceProps = {
   xmlName: string;
   fileContent: string;
   xmlDefinition: string;
+  sessionId: string;
 };
 
 export default function ChatInterface({
@@ -30,8 +31,7 @@ export default function ChatInterface({
   suggestions,
   fileName,
   xmlName,
-  fileContent,
-  xmlDefinition
+  sessionId,
 }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -80,7 +80,7 @@ export default function ChatInterface({
     ]);
 
     try {
-      const { output } = await ask(fileContent, xmlDefinition, input);
+      const { output } = await ask(sessionId, input);
       
       let finalContent = '';
       for await (const delta of readStreamableValue(output)) {
