@@ -11,6 +11,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
+import { createStreamableValue } from 'ai/rsc';
 
 const AskAboutFilesInputSchema = z.object({
   fileContent: z.string().describe('The content of the file to be analyzed.'),
@@ -19,46 +20,38 @@ const AskAboutFilesInputSchema = z.object({
 });
 export type AskAboutFilesInput = z.infer<typeof AskAboutFilesInputSchema>;
 
-const AskAboutFilesOutputSchema = z.object({
-  answer: z.string().describe('The answer to the user\'s question.'),
-});
-export type AskAboutFilesOutput = z.infer<typeof AskAboutFilesOutputSchema>;
+export type AskAboutFilesOutput = {
+  answer: any;
+};
 
 export async function askAboutFiles(input: AskAboutFilesInput): Promise<AskAboutFilesOutput> {
-  return askAboutFilesFlow(input);
+  const stream = createStreamableValue('');
+  
+  (async () => {
+    const { stream: responseStream } = await ai.generateStream({
+      prompt: `You are an expert file analyst. You have been provided with the content of a file and an XML definition. A user will ask you a question about this file. Your task is to answer the question based on the provided context.
+
+      File Content:
+      '''
+      ${input.fileContent}
+      '''
+      
+      XML Definition:
+      '''
+      ${input.xmlDefinition}
+      '''
+      
+      User's Question:
+      ${input.question}
+      
+      Provide a clear and concise answer to the question.`,
+    });
+
+    for await (const chunk of responseStream) {
+      stream.update(chunk.text);
+    }
+    stream.done();
+  })();
+
+  return { answer: stream.value };
 }
-
-const prompt = ai.definePrompt({
-  name: 'askAboutFilesPrompt',
-  input: { schema: AskAboutFilesInputSchema },
-  output: { schema: AskAboutFilesOutputSchema },
-  prompt: `You are an expert file analyst. You have been provided with the content of a file and an XML definition. A user will ask you a question about this file. Your task is to answer the question based on the provided context.
-
-File Content:
-'''
-{{fileContent}}
-'''
-
-XML Definition:
-'''
-{{xmlDefinition}}
-'''
-
-User's Question:
-{{question}}
-
-Provide a clear and concise answer to the question.
-`,
-});
-
-const askAboutFilesFlow = ai.defineFlow(
-  {
-    name: 'askAboutFilesFlow',
-    inputSchema: AskAboutFilesInputSchema,
-    outputSchema: AskAboutFilesOutputSchema,
-  },
-  async (input) => {
-    const { output } = await prompt(input);
-    return output!;
-  }
-);

@@ -73,21 +73,12 @@ export async function ask(
   question: string
 ) {
   'use server';
-  const stream = createStreamableValue();
-
-  (async () => {
-    try {
-      const result = await askAboutFiles({
-        fileContent,
-        xmlDefinition,
-        question,
-      });
-      stream.done({ answer: result.answer });
-    } catch (error) {
-      console.error('Error asking about files:', error);
-      stream.done({ answer: 'Sorry, I encountered an error trying to answer your question.'});
-    }
-  })();
   
-  return { output: stream.value };
+  const { answer } = await askAboutFiles({
+    fileContent,
+    xmlDefinition,
+    question,
+  });
+  
+  return { output: answer };
 }

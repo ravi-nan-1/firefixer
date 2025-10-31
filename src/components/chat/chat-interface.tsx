@@ -67,25 +67,24 @@ function ChatInterfaceContent() {
     setIsLoading(true);
 
     const assistantMessageId = (Date.now() + 1).toString();
+    setMessages((prev) => [
+      ...prev,
+      { id: assistantMessageId, role: 'assistant', content: '' },
+    ]);
 
     try {
       const { output } = await ask(fileContent, xmlDefinition, input);
-
-      setMessages((prev) => [
-        ...prev,
-        { id: assistantMessageId, role: 'assistant', content: '' },
-      ]);
       
+      let finalContent = '';
       for await (const delta of readStreamableValue(output)) {
-        if (delta && typeof delta === 'object' && 'answer' in delta) {
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg.id === assistantMessageId
-                ? { ...msg, content: delta.answer || '' }
-                : msg
-            )
-          );
-        }
+        finalContent += delta;
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === assistantMessageId
+              ? { ...msg, content: finalContent }
+              : msg
+          )
+        );
       }
     } catch (error) {
       const errorMessage: Message = {
@@ -93,7 +92,9 @@ function ChatInterfaceContent() {
         role: 'assistant',
         content: "Sorry, I couldn't get a response. Please try again.",
       };
-      setMessages((prev) => [...prev, errorMessage]);
+      setMessages((prev) => 
+        prev.map(msg => msg.id === assistantMessageId ? errorMessage : msg)
+      );
     } finally {
       setIsLoading(false);
     }
