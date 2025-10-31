@@ -35,37 +35,41 @@ export async function analyzeAndSuggest(
   }
 
   const { file, xml } = validatedFields.data;
+  let analysisResult;
+  let suggestionResult;
+  let fileContent;
+  let xmlDefinition;
 
   try {
-    const fileContent = await file.text();
-    const xmlDefinition = await xml.text();
+    fileContent = await file.text();
+    xmlDefinition = await xml.text();
 
-    const analysisResult = await analyzeFileForIssues({
+    analysisResult = await analyzeFileForIssues({
       fileContent,
       xmlDefinition,
     });
 
     const identifiedIssues = analysisResult.issues.join('\n- ');
-    const suggestionResult = await suggestFixesForIdentifiedIssues({
+    suggestionResult = await suggestFixesForIdentifiedIssues({
       fileContent,
       xmlDefinition,
       identifiedIssues: `- ${identifiedIssues}`,
     });
-    
-    const params = new URLSearchParams();
-    params.set('issues', JSON.stringify(analysisResult.issues));
-    params.set('suggestions', suggestionResult.fixSuggestions);
-    params.set('fileName', file.name);
-    params.set('xmlName', xml.name);
-    params.set('fileContent', fileContent);
-    params.set('xmlDefinition', xmlDefinition);
-
-    redirect(`/chat?${params.toString()}`);
 
   } catch (error: any) {
     console.error('Error during analysis:', error);
     throw new Error(error.message || 'An unexpected error occurred while processing the files. Please try again.');
   }
+
+  const params = new URLSearchParams();
+  params.set('issues', JSON.stringify(analysisResult.issues));
+  params.set('suggestions', suggestionResult.fixSuggestions);
+  params.set('fileName', file.name);
+  params.set('xmlName', xml.name);
+  params.set('fileContent', fileContent);
+  params.set('xmlDefinition', xmlDefinition);
+
+  redirect(`/chat?${params.toString()}`);
 }
 
 export async function ask(
