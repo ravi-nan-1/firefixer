@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect } from 'react';
+import { useRef } from 'react';
 import { useFormStatus } from 'react-dom';
 import { analyzeAndSuggest } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
@@ -61,14 +61,14 @@ export default function UploadPage() {
       return;
     }
     
-    const result = await analyzeAndSuggest(new FormData(formRef.current!));
-
-    if (result && result.status === 'error') {
-       toast({
-        variant: 'destructive',
-        title: 'Analysis Error',
-        description: result.message,
-      });
+    try {
+        await analyzeAndSuggest(formData);
+    } catch(error: any) {
+        toast({
+            variant: 'destructive',
+            title: 'Analysis Error',
+            description: error.message,
+        });
     }
   };
 

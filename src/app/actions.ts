@@ -23,7 +23,7 @@ export type AnalysisState = {
 
 export async function analyzeAndSuggest(
   formData: FormData
-): Promise<AnalysisState | void> {
+): Promise<void> {
   const validatedFields = formSchema.safeParse({
     file: formData.get('file'),
     xml: formData.get('xml'),
@@ -31,10 +31,7 @@ export async function analyzeAndSuggest(
 
   if (!validatedFields.success) {
     const fieldErrors = validatedFields.error.flatten().fieldErrors;
-    return {
-      status: 'error',
-      message: fieldErrors.file?.[0] || fieldErrors.xml?.[0] || 'Invalid file inputs.',
-    };
+    throw new Error(fieldErrors.file?.[0] || fieldErrors.xml?.[0] || 'Invalid file inputs.');
   }
 
   const { file, xml } = validatedFields.data;
@@ -65,12 +62,9 @@ export async function analyzeAndSuggest(
 
     redirect(`/chat?${params.toString()}`);
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error during analysis:', error);
-    return {
-      status: 'error',
-      message: 'An unexpected error occurred while processing the files. Please try again.',
-    };
+    throw new Error(error.message || 'An unexpected error occurred while processing the files. Please try again.');
   }
 }
 
