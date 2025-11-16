@@ -11,15 +11,18 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useLanguage } from '@/context/LanguageContext';
 
 
 export default function Header() {
-  const languages = ['English', 'Español', 'Français', 'Deutsch', '中文', '日本語', 'Português', 'Русский', 'العربية', 'हिन्दी'];
-  const [selectedLanguage, setSelectedLanguage] = useState('English');
+  const { language, setLanguage } = useLanguage();
+  const languages = [{ code: 'en', name: 'English' }, { code: 'es', name: 'Español' }];
+  const [selectedLanguageName, setSelectedLanguageName] = useState('English');
 
-  const changeLanguage = (lang: string) => {
-    setSelectedLanguage(lang);
-    console.log(`Language changed to: ${lang}`);
+  const changeLanguage = (langCode: 'en' | 'es', langName: string) => {
+    setLanguage(langCode);
+    setSelectedLanguageName(langName);
+    console.log(`Language changed to: ${langName}`);
   };
 
   return (
@@ -44,12 +47,12 @@ export default function Header() {
             <DropdownMenuTrigger asChild>
               <Button variant="outline">
                 <Globe className="h-4 w-4 mr-2" />
-                {selectedLanguage}
+                {selectedLanguageName}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               {languages.map(lang => (
-                <DropdownMenuItem key={lang} onClick={() => changeLanguage(lang)}>{lang}</DropdownMenuItem>
+                <DropdownMenuItem key={lang.code} onClick={() => changeLanguage(lang.code as 'en' | 'es', lang.name)}>{lang.name}</DropdownMenuItem>
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
