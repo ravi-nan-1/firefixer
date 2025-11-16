@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useState } from 'react';
 import Logo from '@/components/icons/logo';
 import { Button } from '@/components/ui/button';
 import { Menu, Globe } from 'lucide-react';
@@ -14,7 +15,12 @@ import {
 
 export default function Header() {
   const languages = ['English', 'Español', 'Français', 'Deutsch', '中文', '日本語', 'Português', 'Русский', 'العربية', 'हिन्दी'];
-  const changeLanguage = (lang: string) => console.log(`Language changed to: ${lang}`);
+  const [selectedLanguage, setSelectedLanguage] = useState('English');
+
+  const changeLanguage = (lang: string) => {
+    setSelectedLanguage(lang);
+    console.log(`Language changed to: ${lang}`);
+  };
 
   return (
     <header className="border-b shadow-sm sticky top-0 bg-background/95 backdrop-blur-sm z-50">
@@ -36,9 +42,9 @@ export default function Header() {
         <div className="flex items-center gap-2">
            <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon">
-                <Globe className="h-4 w-4" />
-                <span className="sr-only">Change language</span>
+              <Button variant="outline">
+                <Globe className="h-4 w-4 mr-2" />
+                {selectedLanguage}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
