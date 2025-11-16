@@ -12,6 +12,7 @@ import {
 
 export default function Header() {
   const languages = ['English', 'Español', 'Français', 'Deutsch', '中文', '日本語', 'Português', 'Русский', 'العربية', 'हिन्दी'];
+  const changeLanguage = (lang: string) => console.log(`Language changed to: ${lang}`);
 
   return (
     <header className="border-b shadow-sm sticky top-0 bg-background/95 backdrop-blur-sm z-50">
@@ -40,7 +41,7 @@ export default function Header() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               {languages.map(lang => (
-                <DropdownMenuItem key={lang}>{lang}</DropdownMenuItem>
+                <DropdownMenuItem key={lang} onClick={() => changeLanguage(lang)}>{lang}</DropdownMenuItem>
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
