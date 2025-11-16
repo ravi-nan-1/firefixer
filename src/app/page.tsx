@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, Image, FileText, Video, Box, Star } from 'lucide-react';
@@ -27,14 +27,30 @@ const categoryIcons: { [key: string]: React.FC<React.SVGProps<SVGSVGElement>> } 
 export default function Home() {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
-  const [recentlyUsed, setRecentlyUsed] = useState<string[]>([]); // Placeholder
+  const [recentlyUsed, setRecentlyUsed] = useState<string[]>([]);
+
+  useEffect(() => {
+    try {
+      const savedRecent = localStorage.getItem('recentlyUsedTools');
+      if (savedRecent) {
+        setRecentlyUsed(JSON.parse(savedRecent));
+      }
+    } catch (error) {
+      console.error("Failed to parse recently used tools from localStorage", error);
+      // If parsing fails, start with an empty list
+      setRecentlyUsed([]);
+    }
+  }, []);
 
   const handleToolClick = (id: string) => {
-    // Add to recently used, ensuring no duplicates and maintaining order
     setRecentlyUsed(prev => {
-      const newRecent = [id, ...prev.filter(toolId => toolId !== id)];
-      // In a real app, this would be saved to localStorage
-      return newRecent.slice(0, 4); // Keep only the 4 most recent
+      const newRecent = [id, ...prev.filter(toolId => toolId !== id)].slice(0, 4);
+      try {
+        localStorage.setItem('recentlyUsedTools', JSON.stringify(newRecent));
+      } catch (error) {
+        console.error("Failed to save recently used tools to localStorage", error);
+      }
+      return newRecent;
     });
   };
 
@@ -111,16 +127,21 @@ export default function Home() {
 
 
       {/* Tools Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {filteredTools.map(tool => (
-          <ToolCard key={tool.id} tool={tool} onClick={() => handleToolClick(tool.id)} />
-        ))}
+      <div className="mb-12">
+        <h2 className="text-2xl font-bold font-headline mb-6 text-center md:text-left">
+          {activeCategory === 'All' ? 'All Tools' : activeCategory}
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {filteredTools.map(tool => (
+            <ToolCard key={tool.id} tool={tool} onClick={() => handleToolClick(tool.id)} />
+          ))}
+        </div>
+        {filteredTools.length === 0 && (
+          <p className="text-center col-span-full text-muted-foreground mt-8">
+            No tools found. Try a different search or category.
+          </p>
+        )}
       </div>
-      {filteredTools.length === 0 && (
-        <p className="text-center col-span-full text-muted-foreground mt-8">
-          No tools found. Try a different search or category.
-        </p>
-      )}
 
       {/* Trust & Privacy Section */}
       <div className="mt-20 py-16 bg-card rounded-2xl border">
@@ -175,3 +196,5 @@ export default function Home() {
     </div>
   );
 }
+
+    
