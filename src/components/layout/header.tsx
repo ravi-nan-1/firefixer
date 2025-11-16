@@ -16,10 +16,18 @@ import { useLanguage } from '@/context/LanguageContext';
 
 export default function Header() {
   const { language, setLanguage } = useLanguage();
-  const languages = [{ code: 'en', name: 'English' }, { code: 'es', name: 'Español' }];
+  const languages = [
+    { code: 'en', name: 'English' }, 
+    { code: 'es', name: 'Español' },
+    { code: 'fr', name: 'Français' },
+    { code: 'de', name: 'Deutsch' },
+    { code: 'hi', name: 'हिन्दी' },
+    { code: 'zh', name: '中文' },
+  ];
+  
   const [selectedLanguageName, setSelectedLanguageName] = useState('English');
 
-  const changeLanguage = (langCode: 'en' | 'es', langName: string) => {
+  const changeLanguage = (langCode: 'en' | 'es' | 'fr' | 'de' | 'hi' | 'zh', langName: string) => {
     setLanguage(langCode);
     setSelectedLanguageName(langName);
     console.log(`Language changed to: ${langName}`);
@@ -52,7 +60,7 @@ export default function Header() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               {languages.map(lang => (
-                <DropdownMenuItem key={lang.code} onClick={() => changeLanguage(lang.code as 'en' | 'es', lang.name)}>{lang.name}</DropdownMenuItem>
+                <DropdownMenuItem key={lang.code} onClick={() => changeLanguage(lang.code as any, lang.name)}>{lang.name}</DropdownMenuItem>
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
