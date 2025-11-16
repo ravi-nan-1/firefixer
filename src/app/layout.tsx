@@ -3,11 +3,10 @@ import './globals.css';
 import { cn } from '@/lib/utils';
 import { Toaster } from "@/components/ui/toaster";
 import Header from '@/components/layout/header';
-import { AnalysisProvider } from '@/context/AnalysisContext';
 
 export const metadata: Metadata = {
-  title: 'FileFixer AI',
-  description: 'Upload files to check for issues and get fix suggestions.',
+  title: 'Ultimate File Tools – Free Image, PDF & File Utilities',
+  description: 'A complete suite of free online tools for images, PDFs, and other files. Convert, compress, and edit your files with ease.',
 };
 
 export default function RootLayout({
@@ -21,18 +20,16 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Space+Grotesk:wght@500;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Space+Grotesk:wght@500;700&display=swap"
           rel="stylesheet"
         />
       </head>
       <body className={cn('font-body antialiased', 'min-h-screen bg-background font-sans flex flex-col')}>
-        <AnalysisProvider>
-          <Header />
-          <main className="flex-1 flex flex-col items-center justify-start py-6 md:py-8 px-4 overflow-hidden">
-            {children}
-          </main>
-          <Toaster />
-        </AnalysisProvider>
+        <Header />
+        <main className="flex-1 flex flex-col items-center justify-start py-6 md:py-12 px-4">
+          {children}
+        </main>
+        <Toaster />
       </body>
     </html>
   );
