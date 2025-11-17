@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { Toaster } from "@/components/ui/toaster";
 import Header from '@/components/layout/header';
 import { LanguageProvider } from '@/context/LanguageContext';
+import { AnalysisProvider } from '@/context/AnalysisContext';
 
 export const metadata: Metadata = {
   title: 'Ultimate File Tools – Free Image, PDF & File Utilities',
@@ -26,13 +27,15 @@ export default function RootLayout({
         />
       </head>
       <body className={cn('font-body antialiased', 'min-h-screen bg-background font-sans flex flex-col')}>
-        <LanguageProvider>
-          <Header />
-          <main className="flex-1 flex flex-col items-center justify-start py-6 md:py-12 px-4">
-            {children}
-          </main>
-          <Toaster />
-        </LanguageProvider>
+        <AnalysisProvider>
+          <LanguageProvider>
+            <Header />
+            <main className="flex-1 flex flex-col items-center justify-start py-6 md:py-12 px-4">
+              {children}
+            </main>
+            <Toaster />
+          </LanguageProvider>
+        </AnalysisProvider>
       </body>
     </html>
   );
